@@ -8,10 +8,11 @@ rule all:
         "sample_pop/pop_merge.vcf.gz",
         "sample_pop/pop_merge_newid.vcf.gz",
         "sample_pop/pop_merge_newid_corref.vcf.gz",
-        "plink/ld_prune",
+        "plink/ld_prune.prune.in",
+        "plink/ld_prune.prune.out",
+        "plink/ld_prune.nosex",
+        "plink/ld_prune.log",
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf",
-        "smartpca/genotype.eigenstratgeno",
-        "smartpca/genotype_rmheader.eigenstratgeno",
         "smartpca/genotype_rmheader_conum.eigenstratgeno"
 
 
@@ -48,34 +49,35 @@ rule index_reheader:
 rule sample_pop:
     input:
         exac="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
-        exacindex="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz.tbi"
+        exacindex="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz.tbi",
+        jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
         "sample_pop/{sample}.rep{repetition}.vcf.gz"
     params:
         sample="{sample}"
     shell:
-        "java -jar simdrom-cli-0.0.1.jar -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample} --output {output}"
+        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample} --output {output}"
 
-# Merge all samples into one.
+# Merge all samples into one file.
 rule merge:
     input:
         expand("sample_pop/{sample}.rep{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION)
     output:
         "sample_pop/pop_merge.vcf.gz"
     shell:
-        "bcftools merge {input} -O b -o {output}"
+        "bcftools merge {input} -O z -o {output}"
 
-
-# Give the gens new IDs (some don't have an ID from ExAC),they will be needed later.
+# Give the genes some new IDs (some don't have an ID from ExAC),they will be needed later.
 rule new_id:
     input:
         "sample_pop/pop_merge.vcf.gz"
     output:
         "sample_pop/pop_merge_newid.vcf.gz"
     shell:
-        "zcat {input} | awk -v OFS='\t' '{if (NR>226) $3=(NR-226); print $0}'| bgzip -c > {output}"
-
-
+        """
+        zcat {input} | awk -v OFS='\\t' '{{if ($1 != "#") $3=NR; print $0}}'| bgzip -c > {output}
+        """
+#zcat sample_pop/pop_merge.vcf.gz | awk -v OFS='\t' '/^#/ {next}; $3=NR'| bgzip -c > sample_pop/pop_merge_newid.vcf.gz
 # Correct genotype references.
 rule corr_ref:
     input:
@@ -83,7 +85,7 @@ rule corr_ref:
     output:
         "sample_pop/pop_merge_newid_corref.vcf.gz"
     shell:
-        "bcftools plugin missing2ref {input}"
+        "bcftools plugin missing2ref {input} | bgzip -c > {output}"
 
 
 # Prune regions that display linkage disequilibrium using PLINK.
@@ -91,55 +93,62 @@ rule ld_prune:
     input:
         "sample_pop/pop_merge_newid_corref.vcf.gz"
     output:
-        "plink/ld_prune" # several diffrent filetypes...?
+        "plink/ld_prune.prune.in", # several diffrent filetypes...?
+        "plink/ld_prune.prune.out",
+        "plink/ld_prune.nosex",
+        "plink/ld_prune.log"
     shell:
-        "plink --vcf {input} --indep-pairwise 50 5 0.8 --out {output}"
+        "~/PLINK/plink --vcf {input} --indep-pairwise 50 5 0.8 --out plink/ld_prune"
 
 rule rm_regions:
     input:
         prune="plink/ld_prune.prune.out",
         vcf="sample_pop/pop_merge_newid_corref.vcf.gz"
     output:
-        "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
+        uncompressed=temp("sample_pop/pop_merge_newid_corref.vcf"),
+        vcf="sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     shell:
-        "zcat {input.vcf} | awk 'FNR==NR {a[$i]; next}; !($3 in a)' {input.prune} > {output}"
+        """
+        bgzip -dc {input.vcf} > {output.uncompressed};
+        awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output}
+        """
 
 
 # Prepare files for smartpca.
 
-# Genotype file:
-# Save only genotype columns.
-rule gen_col:
+# Genotype file: Save only genotype columns, remove header and convert genotypes to suit smartpca.
+rule genotype_file:
     input:
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     output:
-        "smartpca/genotype.eigenstratgeno"
-    shell:
-        "cut -f10-27 {input} > {output}"
-
-# Remove header.
-rule rm_header:
-    input:
-        "smartpca/genotype.eigenstratgeno"
-    output:
-        "smartpca/genotype_rmheader.eigenstratgeno"
-    shell:
-        "awk 'NR > 226' {input} > {output}"
-
-# Convert genotypes to suit smartpca.
-rule con_num_2:
-    input:
-        "smartpca/genotype_rmheader.eigenstratgeno"
-    output:
         "smartpca/genotype_rmheader_conum.eigenstratgeno"
-    shell:
-        "sed -i 's:0/0:2:g' {input} > {output}"
-#awk '{if ($0==0/0) $0=2; print $0}'
-#sed -i 's:0/0:2:g'
+    run:
+        fin = open(input[0], 'r')
+        fout = open(output[0],'w')
+        for line in fin:
+            if line.startswith("#"):
+                continue
+            split_line = line.split("\t")
+            genotypes = split_line[9:len(split_line)]
+            results = []
+            for genotype in genotypes:
+                if genotype == "0/0":
+                    result = "2"
+                elif "0" in genotype:
+                    result = "1"
+                else:
+                    result = "0"
+                results.append(result)
+            print("".join(results), file=fout)
 
-
+        fin.close()
+        fout.close()
 
 # SNP file
+rule snp_file:
+    input:
+
+
 # Ind file
 
 # Run smartpca
