@@ -4,7 +4,7 @@ REPETITION = list(range(1,REPETITION_NUMBER+1))
 
 rule all:
     input:
-        expand("sample_pop/{sample}.rep{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        expand("sample_pop/{sample}{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
         "sample_pop/pop_merge.vcf.gz",
         "sample_pop/pop_merge_newid.vcf.gz",
         "sample_pop/pop_merge_newid_corref.vcf.gz",
@@ -13,7 +13,9 @@ rule all:
         "plink/ld_prune.nosex",
         "plink/ld_prune.log",
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf",
-        "smartpca/genotype_rmheader_conum.eigenstratgeno"
+        "smartpca/genotype_rmheader_conum.eigenstratgeno",
+        "smartpca/pop.snp",
+        "smartpca/pop.ind"
 
 
 # Download and prepare ExAC files for SIMdrom.
@@ -52,16 +54,17 @@ rule sample_pop:
         exacindex="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz.tbi",
         jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
-        "sample_pop/{sample}.rep{repetition}.vcf.gz"
+        "sample_pop/{sample}{repetition}.vcf.gz"
     params:
-        sample="{sample}"
+        sample="{sample}",
+        rep="{repetition}"
     shell:
-        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample} --output {output}"
+        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample}{params.rep} --output {output}"
 
 # Merge all samples into one file.
 rule merge:
     input:
-        expand("sample_pop/{sample}.rep{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION)
+        expand("sample_pop/{sample}{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION)
     output:
         "sample_pop/pop_merge.vcf.gz"
     shell:
@@ -75,9 +78,9 @@ rule new_id:
         "sample_pop/pop_merge_newid.vcf.gz"
     shell:
         """
-        zcat {input} | awk -v OFS='\\t' '{{if ($1 != "#") $3=NR; print $0}}'| bgzip -c > {output}
+        zcat {input} | awk -v OFS='\t' '{{ if (/^#/) {{ print $0; next }} else {{ $3=NR; print $0 }} }}' | bgzip -c > {output}
         """
-#zcat sample_pop/pop_merge.vcf.gz | awk -v OFS='\t' '/^#/ {next}; $3=NR'| bgzip -c > sample_pop/pop_merge_newid.vcf.gz
+
 # Correct genotype references.
 rule corr_ref:
     input:
@@ -147,8 +150,29 @@ rule genotype_file:
 # SNP file
 rule snp_file:
     input:
-
+        "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
+    output:
+        "smartpca/pop.snp"
+    shell:
+        """
+        cat {input} | grep -v "#" | awk -v OFS='\\t' '{{print $3,$1,"0.0",$2,$4,$5}}' > {output}
+        """
 
 # Ind file
+rule ind_file:
+    input:
+    output:
+        "smartpca/pop.ind"
+    run:
+        f = open(output[0],'w')
+        for pop in SAMPLES:
+            for i in REPETITION:
+                print("%s\tU\t%s" % (pop+"sample"+str(i),pop) ,file=f)
+        f.close
 
 # Run smartpca
+rule smartpca:
+    input:
+        "smartpca/parfile"
+    output:
+    shell:
