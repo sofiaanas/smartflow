@@ -171,8 +171,8 @@ rule ind_file:
         f.close
 
 # Run smartpca
-rule smartpca:
-    input:
-        "smartpca/parfile"
-    output:
-    shell:
+# rule smartpca:
+#     input:
+#         "smartpca/parfile"
+#     output:
+#     shell:
