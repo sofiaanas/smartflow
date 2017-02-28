@@ -1,10 +1,10 @@
 SAMPLES = ["AFR","AMR","EAS","FIN","NFE","SAS"]
-REPETITION_NUMBER = 1
+REPETITION_NUMBER = 10
 REPETITION = list(range(1,REPETITION_NUMBER+1))
 
 rule all:
     input:
-        expand("sample_pop/{sample}{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        expand("sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
         "sample_pop/pop_merge.vcf.gz",
         "sample_pop/pop_merge_newid.vcf.gz",
         "sample_pop/pop_merge_newid_corref.vcf.gz",
@@ -13,9 +13,17 @@ rule all:
         "plink/ld_prune.nosex",
         "plink/ld_prune.log",
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf",
-        "smartpca/genotype_rmheader_conum.eigenstratgeno",
-        "smartpca/pop.snp",
-        "smartpca/pop.ind"
+        "smartpca/genfile.eigenstratgeno",
+        "smartpca/snpfile.snp",
+        "smartpca/indfile.ind",
+        "smartpca/pca.log",
+        "smartpca/pca.evec",
+        "smartpca/pca.eval",
+        #"smartpca/grmjunk",
+        #"smartpca/grmjunk.id",
+        "smartpca/plotpca.xtxt",
+        "smartpca/plotpca.ps",
+        #"smartpca/plotpca.pdf"
 
 
 # Download and prepare ExAC files for SIMdrom.
@@ -54,17 +62,17 @@ rule sample_pop:
         exacindex="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz.tbi",
         jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
-        "sample_pop/{sample}{repetition}.vcf.gz"
+        "sample_pop/{sample}.{repetition}.vcf.gz"
     params:
         sample="{sample}",
         rep="{repetition}"
     shell:
-        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample}{params.rep} --output {output}"
+        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample}.{params.rep} --output {output}"
 
 # Merge all samples into one file.
 rule merge:
     input:
-        expand("sample_pop/{sample}{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION)
+        expand("sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION)
     output:
         "sample_pop/pop_merge.vcf.gz"
     shell:
@@ -124,7 +132,7 @@ rule genotype_file:
     input:
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     output:
-        "smartpca/genotype_rmheader_conum.eigenstratgeno"
+        "smartpca/genfile.eigenstratgeno"
     run:
         fin = open(input[0], 'r')
         fout = open(output[0],'w')
@@ -152,17 +160,18 @@ rule snp_file:
     input:
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     output:
-        "smartpca/pop.snp"
+        "smartpca/snpfile.snp"
     shell:
         """
-        cat {input} | grep -v "#" | awk -v OFS='\\t' '{{print $3,$1,"0.0",$2,$4,$5}}' > {output}
+        cat {input} | grep -v "#" | awk -v OFS='\\t' '{{ if ($1 == "X") $1=23; else if ($1=="Y") $1=24; print $3,$1,"0.0",$2,$4,$5}}' > {output}
         """
 
-# Ind file
+# Individuals file
 rule ind_file:
     input:
+        "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     output:
-        "smartpca/pop.ind"
+        "smartpca/indfile.ind"
     run:
         f = open(output[0],'w')
         for pop in SAMPLES:
@@ -170,9 +179,53 @@ rule ind_file:
                 print("%s\tU\t%s" % (pop+"sample"+str(i),pop) ,file=f)
         f.close
 
+rule smartpcaconfig:
+    input:
+        genotypename = "smartpca/genfile.eigenstratgeno",
+        snpname="smartpca/snpfile.snp",
+        indivname="smartpca/indfile.ind"
+    output:
+        "smartpca/parfile"
+    params:
+        evecoutname="smartpca/pca.evec",
+        evaloutname="smartpca/pca.eval"
+    shell:
+        """
+        echo "genotypename: {input.genotypename}" >> {output};
+        echo "snpname: {input.snpname}" >> {output};
+        echo "indivname: {input.indivname}" >> {output};
+        echo "evecoutname: {params.evecoutname}" >> {output};
+        echo "evaloutname: {params.evaloutname}" >> {output};
+        echo "ealtnormstyle:    NO " >> {output};
+        echo "familynames:     NO" >> {output};
+        echo "grmoutname:      grmjunk" >> {output};
+        """
+
+
 # Run smartpca
-# rule smartpca:
-#     input:
-#         "smartpca/parfile"
-#     output:
-#     shell:
+rule smartpca:
+    input:
+        "smartpca/parfile"
+    output:
+        log="smartpca/pca.log",
+        evec="smartpca/pca.evec",
+        eval="smartpca/pca.eval",
+        #grmjunk="smartpca/grmjunk",
+        #grmid="smartpca/grmjunk.id"
+    shell:
+        "../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
+
+# Plot
+
+rule plot:
+    input:
+        "smartpca/pca.evec"
+    output:
+        xtxt="smartpca/plotpca.xtxt",
+        ps="smartpca/plotpca.ps",
+        #pdf="smartpca/plotpca.pdf"
+
+    params:
+        sample=":".join(SAMPLES)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
