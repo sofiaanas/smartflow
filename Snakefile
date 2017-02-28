@@ -179,6 +179,7 @@ rule ind_file:
                 print("%s\tU\t%s" % (pop+"sample"+str(i),pop) ,file=f)
         f.close
 
+# Create the parfile
 rule smartpcaconfig:
     input:
         genotypename = "smartpca/genfile.eigenstratgeno",
@@ -201,7 +202,6 @@ rule smartpcaconfig:
         echo "grmoutname:      grmjunk" >> {output};
         """
 
-
 # Run smartpca
 rule smartpca:
     input:
@@ -214,7 +214,6 @@ rule smartpca:
         #grmid="smartpca/grmjunk.id"
     shell:
         "../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
-
 
 # Plot the results from smartpca
 rule plot:
