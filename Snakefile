@@ -215,6 +215,7 @@ rule smartpca:
     shell:
         "../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
 
+
 # Plot the results from smartpca
 rule plot:
     input:
