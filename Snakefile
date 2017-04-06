@@ -1,9 +1,23 @@
+
+CHROMOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY","chrMT"]
+AUTOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
 SAMPLES = ["AFR","AMR","EAS","FIN","NFE","SAS"]
+
 REPETITION_NUMBER = 10
 REPETITION = list(range(1,REPETITION_NUMBER+1))
 
 rule all:
     input:
+        expand("1KG/samples/1KGsamples.{auto}.vcf.gz", auto=AUTOSOMES),
+        expand("1KG/samples/1KGsamples.{auto}.vcf.gz.tbi", auto=AUTOSOMES),
+        "1KG/samples/1KGsamples.chrMT.vcf.gz",
+        "1KG/samples/1KGsamples.chrX.vcf.gz",
+        "1KG/samples/1KGsamples.chrY.vcf.gz",
+        "1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
+        "1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
+        "1KG/samples/1KGsamples.chrY.vcf.gz.tbi",
+        "1KG/1KGsamples.concat.vcf.gz",
+        "1KG/1KGsamples.concat.vcf.gz.tbi",
         expand("sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
         "sample_pop/pop_merge.vcf.gz",
         "sample_pop/pop_merge_newid.vcf.gz",
@@ -19,11 +33,133 @@ rule all:
         "smartpca/pca.log",
         "smartpca/pca.evec",
         "smartpca/pca.eval",
-        #"smartpca/grmjunk",
-        #"smartpca/grmjunk.id",
         "smartpca/plotpca.xtxt",
         "smartpca/plotpca.ps",
-        #"smartpca/plotpca.pdf"
+
+
+###################################  1KG  ###################################
+
+
+# Download the real genomes and indexes from 1000 Genomes project, first the autosomes
+rule download_auto:
+    input:
+    output:
+        temp=(expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz", auto=AUTOSOMES))
+    run:
+        for chr in AUTOSOMES:
+            shell("wget -O 1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz")
+
+
+rule download_autoidx:
+    input:
+    output:
+        temp=(expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi", auto=AUTOSOMES))
+    run:
+        for chr in AUTOSOMES:
+            shell("wget -O 1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi")
+
+# Pick out six samples from each autosome (one from each population) defined in samples.txt
+rule pick_auto:
+    input:
+        samples="samples.txt",
+        vcf="1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz",
+        index="1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi"
+    output:
+        "1KG/samples/1KGsamples.{chr}.vcf.gz"
+    shell:
+        "bcftools view -Oz -S {input.samples} {input.vcf} > {output}"
+
+# Create new indexes
+rule index_autosample:
+	input:
+		"1KG/samples/1KGsamples.{chr}.vcf.gz"
+	output:
+		"1KG/samples/1KGsamples.{chr}.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+# Download the real genomes and indexes from 1000 Genomes project, now the gonosomes
+rule download_gono:
+	input:
+	output:
+		mt=temp("1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz"),
+		x=temp("1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz"),
+		y=temp("1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz")
+	shell:
+		"wget -O {output.mt} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz && "
+		"wget -O {output.x} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz && "
+		"wget -O {output.y} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz "
+
+rule download_gonoidx:
+	input:
+	output:
+		mt=temp("1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi"),
+		x=temp("1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi"),
+		y=temp("1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz.tbi")
+	shell:
+		"wget -O {output.mt} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi && "
+		"wget -O {output.x} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi && "
+		"wget -O {output.y} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz.tbi "
+
+# Pick out six samples from each gonosome (one from each population) defined in samples.txt
+rule pick_gono:
+    input:
+        samples="samples.txt",
+        mt="1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz",
+        mtidx="1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi",
+        x="1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz",
+        xidx="1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi",
+        y="1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz",
+        yidx="1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz.tbi"
+    output:
+        mt="1KG/samples/1KGsamples.chrMT.vcf.gz",
+        x="1KG/samples/1KGsamples.chrX.vcf.gz",
+        y="1KG/samples/1KGsamples.chrY.vcf.gz"
+    shell:
+        """
+        bcftools view -Oz -S {input.samples} {input.mt} > {output.mt};
+        bcftools view -Oz -S {input.samples} {input.x} > {output.x};
+        bcftools view -Oz -S {input.samples} {input.y} > {output.y}
+        """
+
+# Create new indexes
+rule index_gonosample:
+    input:
+        mt="1KG/samples/1KGsamples.chrMT.vcf.gz",
+        x="1KG/samples/1KGsamples.chrX.vcf.gz",
+        y="1KG/samples/1KGsamples.chrY.vcf.gz"
+    output:
+        mt="1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
+        x="1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
+        y="1KG/samples/1KGsamples.chrY.vcf.gz.tbi"
+    shell:
+        """
+        tabix {input.mt};
+        tabix {input.x};
+        tabix {input.y}
+        """
+
+# Concatenate the 1KG chromosome vcfs into one vcf
+rule concat1KG:
+	input:
+		vcf=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+		index=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+	output:
+		"1KG/1KGsamples.concat.vcf.gz"
+	shell:
+		"bcftools concat {input.vcf} | bcftools view -v snps,indels | bgzip -c > {output}"
+
+# Create index
+rule indexConcat:
+	input:
+		"1KG/1KGsamples.concat.vcf.gz"
+	output:
+		"1KG/1KGsamples.concat.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+
+##################################  EXAC  ##################################
 
 
 # Download and prepare ExAC files for SIMdrom.
@@ -78,7 +214,7 @@ rule merge:
     shell:
         "bcftools merge {input} -O z -o {output}"
 
-# Give the genes some new IDs (some don't have an ID from ExAC),they will be needed later.
+# Give the snps new IDs (some don't have an ID from ExAC),they will be needed later.
 rule new_id:
     input:
         "sample_pop/pop_merge.vcf.gz"
@@ -121,7 +257,7 @@ rule rm_regions:
     shell:
         """
         bgzip -dc {input.vcf} > {output.uncompressed};
-        awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output}
+        awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output.vcf};
         """
 
 
@@ -172,12 +308,10 @@ rule ind_file:
         "sample_pop/pop_merge_newid_corref_ldpruned.vcf"
     output:
         "smartpca/indfile.ind"
-    run:
-        f = open(output[0],'w')
-        for pop in SAMPLES:
-            for i in REPETITION:
-                print("%s\tU\t%s" % (pop+"sample"+str(i),pop) ,file=f)
-        f.close
+    shell:
+        """
+        bcftools query -l {input} | awk -v OFS="\t" -F"." '{{print $1$2,"U",$1}}' > {output}
+        """
 
 # Create the parfile
 rule smartpcaconfig:
