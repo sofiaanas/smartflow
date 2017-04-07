@@ -1,14 +1,7 @@
 .snakemake
 databases/
 files/
-sample_pop/
 plink/
 smartpca/
 1KG/
-grmjunk
-grmjunk.id
-plotpca.pdf
-OLD/
-old1KG/
-exAFRplotpca.pdf
-pca.evec
+ExAC/
