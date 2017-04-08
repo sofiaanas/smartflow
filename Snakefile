@@ -208,23 +208,23 @@ rule sample_pop:
 # Filter the 1kg genome to only keep exac regions.
 rule filter1KG:
     input:
-		exac="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
-		vcf="1KG/1KGsamples_concat.vcf.gz",
-		index="1KG/1KGsamples_concat.vcf.gz.tbi"
-	output:
-		"1KG/1KGsamples_concat_excut.vcf.gz"
-	shell:
-		"bedtools intersect -header -a {input.vcf} -b {input.exac} 2>/dev/null | bgzip -c > {output}"
+        exac="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
+        vcf="1KG/1KGsamples_concat.vcf.gz",
+        index="1KG/1KGsamples_concat.vcf.gz.tbi"
+    output:
+        "1KG/1KGsamples_concat_excut.vcf.gz"
+    shell:
+        "bedtools intersect -header -a {input.vcf} -b {input.exac} 2>/dev/null | bgzip -c > {output}"
 
 # Merge all samples (exac and real) into one file.
 rule merge:
     input:
         exac=expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        1kg="1KG/1KGsamples_concat_excut.vcf.gz"
+        kg="1KG/1KGsamples_concat_excut.vcf.gz"
     output:
         "prepsmart/pop_merge.vcf.gz"
     shell:
-        "bcftools merge {input.exac} {input.1kg} -O z -o {output}"
+        "bcftools merge {input.exac} {input.kg} -O z -o {output}"
 
 
 ###############################  prep smartpca  ###############################
@@ -332,7 +332,7 @@ rule smartpcaconfig:
         snpname="smartpca/snpfile.snp",
         indivname="smartpca/indfile.ind"
     output:
-        "smartpca/parfile
+        "smartpca/parfile"
     params:
         evecoutname="smartpca/pca.evec",
         evaloutname="smartpca/pca.eval"
