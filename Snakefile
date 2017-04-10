@@ -1,5 +1,6 @@
 
 CHROMOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY","chrMT"]
+CHROMEX=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY"]
 AUTOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
 SAMPLES = ["AFR","AMR","EAS","FIN","NFE","SAS"]
 
@@ -19,22 +20,22 @@ rule all:
         "1KG/1KGsamples_concat.vcf.gz",
         "1KG/1KGsamples_concat.vcf.gz.tbi",
         expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        "prepsmart/pop_merge.vcf.gz",
-        "prepsmart/pop_merge_newid.vcf.gz",
-        "prepsmart/pop_merge_newid_corref.vcf.gz",
-        "plink/ld_prune.prune.in",
-        "plink/ld_prune.prune.out",
-        "plink/ld_prune.nosex",
-        "plink/ld_prune.log",
-        "prepsmart/pop_merge_newid_corref_ldpruned.vcf",
-        "smartpca/genfile.eigenstratgeno",
-        "smartpca/snpfile.snp",
-        "smartpca/indfile.ind",
-        "smartpca/pca.log",
-        "smartpca/pca.evec",
-        "smartpca/pca.eval",
-        "smartpca/plotpca.xtxt",
-        "smartpca/plotpca.ps"
+        # "prepsmart/pop_merge.vcf.gz",
+        # "prepsmart/pop_merge_newid.vcf.gz",
+        # "prepsmart/pop_merge_newid_corref.vcf.gz",
+        # "plink/ld_prune.prune.in",
+        # "plink/ld_prune.prune.out",
+        # "plink/ld_prune.nosex",
+        # "plink/ld_prune.log",
+        # "prepsmart/pop_merge_newid_corref_ldpruned.vcf",
+        # "smartpca/genfile.eigenstratgeno",
+        # "smartpca/snpfile.snp",
+        # "smartpca/indfile.ind",
+        # "smartpca/pca.log",
+        # "smartpca/pca.evec",
+        # "smartpca/pca.eval",
+        # "smartpca/plotpca.xtxt",
+        # "smartpca/plotpca.ps"
 
 
 ####################################  1KG  ####################################
@@ -205,172 +206,191 @@ rule sample_pop:
     shell:
         "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample}.{params.rep} --output {output}"
 
-# Filter the 1kg genome to only keep exac regions.
-rule filter1KG:
+# # Filter the 1kg genome to only keep exac regions.
+# rule filter1KG:
+#     input:
+#         ....
+#         vcf="1KG/1KGsamples_concat.vcf.gz",
+#         vidx="1KG/1KGsamples_concat.vcf.gz.tbi"
+#     output:
+#         "1KG/1KGsamples_concat_excut.vcf.gz"
+#     shell:
+#         "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
+
+# Download the regions for the exome and their indexes
+rule download_region:
     input:
-        exac="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
-        vcf="1KG/1KGsamples_concat.vcf.gz",
-        index="1KG/1KGsamples_concat.vcf.gz.tbi"
     output:
-        "1KG/1KGsamples_concat_excut.vcf.gz"
-    shell:
-        "bedtools intersect -header -a {input.vcf} -b {input.exac} 2>/dev/null | bgzip -c > {output}"
-
-# Merge all samples (exac and real) into one file.
-rule merge:
-    input:
-        exac=expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        kg="1KG/1KGsamples_concat_excut.vcf.gz"
-    output:
-        "prepsmart/pop_merge.vcf.gz"
-    shell:
-        "bcftools merge {input.exac} {input.kg} -O z -o {output}"
-
-
-###############################  prep smartpca  ###############################
-
-
-# Give the snps new IDs (some don't have an ID from ExAC),they will be needed later.
-rule new_id:
-    input:
-        "prepsmart/pop_merge.vcf.gz"
-    output:
-        "prepsmart/pop_merge_newid.vcf.gz"
-    shell:
-        """
-        zcat {input} | awk -v OFS='\t' '{{ if (/^#/) {{ print $0; next }} else {{ $3=NR; print $0 }} }}' | bgzip -c > {output}
-        """
-
-# Correct the genotype references.
-rule corr_ref:
-    input:
-        "prepsmart/pop_merge_newid.vcf.gz"
-    output:
-        "prepsmart/pop_merge_newid_corref.vcf.gz"
-    shell:
-        "bcftools plugin missing2ref {input} | bgzip -c > {output}"
-
-# Prune regions that display linkage disequilibrium using PLINK.
-rule ld_prune:
-    input:
-        "prepsmart/pop_merge_newid_corref.vcf.gz"
-    output:
-        "plink/ld_prune.prune.in",
-        "plink/ld_prune.prune.out",
-        "plink/ld_prune.nosex",
-        "plink/ld_prune.log"
-    shell:
-        "~/PLINK/plink --vcf {input} --indep-pairwise 50 5 0.8 --out plink/ld_prune"
-
-rule rm_regions:
-    input:
-        prune="plink/ld_prune.prune.out",
-        vcf="prepsmart/pop_merge_newid_corref.vcf.gz"
-    output:
-        uncompressed=temp("prepsmart/pop_merge_newid_corref.vcf"),
-        vcf="prepsmart/pop_merge_newid_corref_ldpruned.vcf"
-    shell:
-        """
-        bgzip -dc {input.vcf} > {output.uncompressed};
-        awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output.vcf};
-        """
-
-# Genotype file: Save only genotype columns, remove header and convert genotypes to suit smartpca.
-rule genotypefile:
-    input:
-        "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
-    output:
-        "smartpca/genfile.eigenstratgeno"
+        temp=(expand("region/Panel.{chex}.coverage.txt.gz", chex=CHROMEX))
     run:
-        fin = open(input[0], 'r')
-        fout = open(output[0],'w')
-        for line in fin:
-            if line.startswith("#"):
-                continue
-            split_line = line.split("\t")
-            genotypes = split_line[9:len(split_line)]
-            results = []
-            for genotype in genotypes:
-                if genotype == "0/0":
-                    result = "2"
-                elif "0" in genotype:
-                    result = "1"
-                else:
-                    result = "0"
-                results.append(result)
-            print("".join(results), file=fout)
+        for chr in CHROMEX:
+            shell("wget -O region/Panel.{chr}.coverage.txt.gz ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz")
 
-        fin.close()
-        fout.close()
 
-# SNP file
-rule snpfile_exac:
+rule download_regionidx:
     input:
-        "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
     output:
-        "smartpca/snpfile.snp"
-    shell:
-        """
-        cat {input} | grep -v "#" | awk -v OFS='\\t' '{{ if ($1 == "X") $1=23; else if ($1=="Y") $1=24; print $3,$1,"0.0",$2,$4,$5}}' > {output}
-        """
+        temp=(expand("region/Panel.{chex}.coverage.txt.gz.tbi", chex=CHROMEX))
+    run:
+        for chr in CHROMEX:
+            shell("wget -O region/Panel.{chr}.coverage.txt.gz.tbi ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz.tbi")
 
-# Individuals file
-rule indfile_exac:
-    input:
-        "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
-    output:
-        "smartpca/indfile.ind"
-    shell:
-        """
-        bcftools query -l {input} | awk -v OFS="\t" -F"." '{{print $1$2,"U",$1}}' > {output}
-        """
 
-# Create the parfile
-rule smartpcaconfig:
-    input:
-        genotypename = "smartpca/genfile.eigenstratgeno",
-        snpname="smartpca/snpfile.snp",
-        indivname="smartpca/indfile.ind"
-    output:
-        "smartpca/parfile"
-    params:
-        evecoutname="smartpca/pca.evec",
-        evaloutname="smartpca/pca.eval"
-    shell:
-        """
-        echo "genotypename: {input.genotypename}" >> {output};
-        echo "snpname: {input.snpname}" >> {output};
-        echo "indivname: {input.indivname}" >> {output};
-        echo "evecoutname: {params.evecoutname}" >> {output};
-        echo "evaloutname: {params.evaloutname}" >> {output};
-        echo "ealtnormstyle:    NO " >> {output};
-        echo "familynames:     NO" >> {output};
-        echo "grmoutname:      grmjunk" >> {output};
-        """
+# # Merge all samples (exac and real) into one file.
+# rule merge:
+#     input:
+#         exac=expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+#         kg="1KG/1KGsamples_concat_excut.vcf.gz"
+#     output:
+#         "prepsmart/pop_merge.vcf.gz"
+#     shell:
+#         "bcftools merge {input.exac} {input.kg} -O z -o {output}"
 
-# Run smartpca
-rule smartpca:
-    input:
-        "smartpca/parfile"
-    output:
-        log="smartpca/pca.log",
-        evec="smartpca/pca.evec",
-        eval="smartpca/pca.eval",
-        grmjunk="smartpca/grmjunk",
-        grmid="smartpca/grmjunk.id"
-    shell:
-        "../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
 
-# Plot the results from smartpca
-rule plot:
-    input:
-        "smartpca/pca.evec"
-    output:
-        xtxt="smartpca/plotpca.xtxt",
-        ps="smartpca/plotpca.ps",
-        pdf="smartpca/plotpca.pdf"
-
-    params:
-        sample=":".join(SAMPLES)
-    shell:
-        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
+# ###############################  prep smartpca  ###############################
+#
+#
+# # Give the snps new IDs (some don't have an ID from ExAC),they will be needed later.
+# rule new_id:
+#     input:
+#         "prepsmart/pop_merge.vcf.gz"
+#     output:
+#         "prepsmart/pop_merge_newid.vcf.gz"
+#     shell:
+#         """
+#         zcat {input} | awk -v OFS='\t' '{{ if (/^#/) {{ print $0; next }} else {{ $3=NR; print $0 }} }}' | bgzip -c > {output}
+#         """
+#
+# # Correct the genotype references.
+# rule corr_ref:
+#     input:
+#         "prepsmart/pop_merge_newid.vcf.gz"
+#     output:
+#         "prepsmart/pop_merge_newid_corref.vcf.gz"
+#     shell:
+#         "bcftools plugin missing2ref {input} | bgzip -c > {output}"
+#
+# # Prune regions that display linkage disequilibrium using PLINK.
+# rule ld_prune:
+#     input:
+#         "prepsmart/pop_merge_newid_corref.vcf.gz"
+#     output:
+#         "plink/ld_prune.prune.in",
+#         "plink/ld_prune.prune.out",
+#         "plink/ld_prune.nosex",
+#         "plink/ld_prune.log"
+#     shell:
+#         "~/PLINK/plink --vcf {input} --indep-pairwise 50 5 0.8 --out plink/ld_prune"
+#
+# rule rm_regions:
+#     input:
+#         prune="plink/ld_prune.prune.out",
+#         vcf="prepsmart/pop_merge_newid_corref.vcf.gz"
+#     output:
+#         uncompressed=temp("prepsmart/pop_merge_newid_corref.vcf"),
+#         vcf="prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+#     shell:
+#         """
+#         bgzip -dc {input.vcf} > {output.uncompressed};
+#         awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output.vcf};
+#         """
+#
+# # Genotype file: Save only genotype columns, remove header and convert genotypes to suit smartpca.
+# rule genotypefile:
+#     input:
+#         "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+#     output:
+#         "smartpca/genfile.eigenstratgeno"
+#     run:
+#         fin = open(input[0], 'r')
+#         fout = open(output[0],'w')
+#         for line in fin:
+#             if line.startswith("#"):
+#                 continue
+#             split_line = line.split("\t")
+#             genotypes = split_line[9:len(split_line)]
+#             results = []
+#             for genotype in genotypes:
+#                 if genotype == "0/0":
+#                     result = "2"
+#                 elif "0" in genotype:
+#                     result = "1"
+#                 else:
+#                     result = "0"
+#                 results.append(result)
+#             print("".join(results), file=fout)
+#
+#         fin.close()
+#         fout.close()
+#
+# # SNP file
+# rule snpfile_exac:
+#     input:
+#         "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+#     output:
+#         "smartpca/snpfile.snp"
+#     shell:
+#         """
+#         cat {input} | grep -v "#" | awk -v OFS='\\t' '{{ if ($1 == "X") $1=23; else if ($1=="Y") $1=24; print $3,$1,"0.0",$2,$4,$5}}' > {output}
+#         """
+#
+# # Individuals file
+# rule indfile_exac:
+#     input:
+#         "prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+#     output:
+#         "smartpca/indfile.ind"
+#     shell:
+#         """
+#         bcftools query -l {input} | awk -v OFS="\t" -F"." '{{print $1$2,"U",$1}}' > {output}
+#         """
+#
+# # Create the parfile
+# rule smartpcaconfig:
+#     input:
+#         genotypename = "smartpca/genfile.eigenstratgeno",
+#         snpname="smartpca/snpfile.snp",
+#         indivname="smartpca/indfile.ind"
+#     output:
+#         "smartpca/parfile"
+#     params:
+#         evecoutname="smartpca/pca.evec",
+#         evaloutname="smartpca/pca.eval"
+#     shell:
+#         """
+#         echo "genotypename: {input.genotypename}" >> {output};
+#         echo "snpname: {input.snpname}" >> {output};
+#         echo "indivname: {input.indivname}" >> {output};
+#         echo "evecoutname: {params.evecoutname}" >> {output};
+#         echo "evaloutname: {params.evaloutname}" >> {output};
+#         echo "ealtnormstyle:    NO " >> {output};
+#         echo "familynames:     NO" >> {output};
+#         echo "grmoutname:      grmjunk" >> {output};
+#         """
+#
+# # Run smartpca
+# rule smartpca:
+#     input:
+#         "smartpca/parfile"
+#     output:
+#         log="smartpca/pca.log",
+#         evec="smartpca/pca.evec",
+#         eval="smartpca/pca.eval",
+#         grmjunk="smartpca/grmjunk",
+#         grmid="smartpca/grmjunk.id"
+#     shell:
+#         "../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
+#
+# # Plot the results from smartpca
+# rule plot:
+#     input:
+#         "smartpca/pca.evec"
+#     output:
+#         xtxt="smartpca/plotpca.xtxt",
+#         ps="smartpca/plotpca.ps",
+#         pdf="smartpca/plotpca.pdf"
+#
+#     params:
+#         sample=":".join(SAMPLES)
+#     shell:
+#         "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
