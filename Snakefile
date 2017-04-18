@@ -9,6 +9,9 @@ REPETITION = list(range(1,REPETITION_NUMBER+1))
 
 rule all:
     input:
+        expand("region/Panel.{chex}.coverage.txt.gz", chex=CHROMEX),
+        expand("region/Panel.{chex}.coverage.txt.gz.tbi", chex=CHROMEX),
+        "region/regions.bed",
         expand("1KG/samples/1KGsamples.{auto}.vcf.gz", auto=AUTOSOMES),
         expand("1KG/samples/1KGsamples.{auto}.vcf.gz.tbi", auto=AUTOSOMES),
         "1KG/samples/1KGsamples.chrMT.vcf.gz",
@@ -19,8 +22,12 @@ rule all:
         "1KG/samples/1KGsamples.chrY.vcf.gz.tbi",
         "1KG/1KGsamples_concat.vcf.gz",
         "1KG/1KGsamples_concat.vcf.gz.tbi",
+        "1KG/1KG.regcut.vcf.gz",
+        "1KG/1KG.regcut.vcf.gz.tbi",
+        "ExAC/ExAC.regcut.vcf.gz",
+        "ExAC/ExAC.regcut.vcf.gz.tbi",
         expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        # "prepsmart/pop_merge.vcf.gz",
+        "prepsmart/pop_merge.vcf.gz",
         # "prepsmart/pop_merge_newid.vcf.gz",
         # "prepsmart/pop_merge_newid_corref.vcf.gz",
         # "plink/ld_prune.prune.in",
@@ -36,6 +43,34 @@ rule all:
         # "smartpca/pca.eval",
         # "smartpca/plotpca.xtxt",
         # "smartpca/plotpca.ps"
+
+
+# Download the regions for the exome and their indexes
+rule download_region:
+    input:
+    output:
+        expand("region/Panel.{chex}.coverage.txt.gz", chex=CHROMEX)
+    run:
+        for chr in CHROMEX:
+            shell("wget -O region/Panel.{chr}.coverage.txt.gz ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz")
+
+rule download_regionidx:
+    input:
+    output:
+        expand("region/Panel.{chex}.coverage.txt.gz.tbi", chex=CHROMEX)
+    run:
+        for chr in CHROMEX:
+            shell("wget -O region/Panel.{chr}.coverage.txt.gz.tbi ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz.tbi")
+
+# Pick regions with given covrage
+rule pick_region:
+    input:
+        dir="region/",
+        scr="scripts/regions.py"
+    output:
+        "region/regions.bed"
+    shell:
+        "python {input.scr} --coverage 20 --directory {input.dir} > {output}"
 
 
 ####################################  1KG  ####################################
@@ -159,6 +194,22 @@ rule concat_idx:
 	shell:
 		"tabix {input}"
 
+rule filter_1kg:
+    input:
+        vcf="1KG/1KGsamples_concat.vcf.gz",
+        bed="region/regions.bed"
+    output:
+        "1KG/1KG.regcut.vcf.gz"
+    shell:
+        "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
+
+rule filterkg_idx:
+    input:
+        "1KG/1KG.regcut.vcf.gz"
+    output:
+        "1KG/1KG.regcut.vcf.gz.tbi"
+    shell:
+        "tabix {input}"
 
 ###################################  EXAC  ###################################
 
@@ -192,11 +243,28 @@ rule reheader_idx:
     shell:
         "tabix {input}"
 
+rule filter_exac:
+    input:
+        vcf="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
+        bed="region/regions.bed"
+    output:
+        "ExAC/ExAC.regcut.vcf.gz"
+    shell:
+        "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
+
+rule filterex_idx:
+    input:
+        "ExAC/ExAC.regcut.vcf.gz"
+    output:
+        "ExAC/ExAC.regcut.vcf.gz.tbi"
+    shell:
+        "tabix {input}"
+
 # Sample individuals of different ethnicities using SIMdrom.
 rule sample_pop:
     input:
-        exac="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz",
-        exacindex="databases/ExAC.r0.3.1.sites.vep.reheader.vcf.gz.tbi",
+        exac="ExAC/ExAC.regcut.vcf.gz",
+        eidx="ExAC/ExAC.regcut.vcf.gz.tbi",
         jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
         "ExAC/sample_pop/{sample}.{repetition}.vcf.gz"
@@ -206,45 +274,15 @@ rule sample_pop:
     shell:
         "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n {params.sample}.{params.rep} --output {output}"
 
-# # Filter the 1kg genome to only keep exac regions.
-# rule filter1KG:
-#     input:
-#         ....
-#         vcf="1KG/1KGsamples_concat.vcf.gz",
-#         vidx="1KG/1KGsamples_concat.vcf.gz.tbi"
-#     output:
-#         "1KG/1KGsamples_concat_excut.vcf.gz"
-#     shell:
-#         "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
-
-# Download the regions for the exome and their indexes
-rule download_region:
+# Merge all samples (exac and real) into one file.
+rule merge:
     input:
+        exac=expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        kg="1KG/1KG.regcut.vcf.gz"
     output:
-        temp=(expand("region/Panel.{chex}.coverage.txt.gz", chex=CHROMEX))
-    run:
-        for chr in CHROMEX:
-            shell("wget -O region/Panel.{chr}.coverage.txt.gz ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz")
-
-
-rule download_regionidx:
-    input:
-    output:
-        temp=(expand("region/Panel.{chex}.coverage.txt.gz.tbi", chex=CHROMEX))
-    run:
-        for chr in CHROMEX:
-            shell("wget -O region/Panel.{chr}.coverage.txt.gz.tbi ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/coverage/Panel.{chr}.coverage.txt.gz.tbi")
-
-
-# # Merge all samples (exac and real) into one file.
-# rule merge:
-#     input:
-#         exac=expand("ExAC/sample_pop/{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-#         kg="1KG/1KGsamples_concat_excut.vcf.gz"
-#     output:
-#         "prepsmart/pop_merge.vcf.gz"
-#     shell:
-#         "bcftools merge {input.exac} {input.kg} -O z -o {output}"
+        "prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.exac} {input.kg} -O z -o {output}"
 
 
 # ###############################  prep smartpca  ###############################
