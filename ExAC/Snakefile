@@ -1,18 +1,22 @@
-
 CHROMOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY","chrMT"]
 CHROMEX=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY"]
 AUTOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
 
-SAMPLES = ["AFR","AMR","EAS","FIN","NFE","SAS"]
+POPULATION = ["AFR","AMR","EAS","FIN","NFE","SAS"]
+
 REAL = ["NA19020","NA19700","NA18510","HG01550","HG01970","NA19720","NA18620","NA18940","HG01600","HG00310","HG00190","HG00280","HG00140","NA20510","NA07000","HG02600","HG03600","HG03770"]
 
-
+AFRREAL = ["NA19020","NA19700","NA18510"]
+AMRREAL = ["HG01550","HG01970","NA19720"]
+EASREAL = ["NA18620","NA18940","HG01600"]
+FINREAL = ["HG00310","HG00190","HG00280"]
 NFEREAL = ["HG00140","NA20510","NA07000"]
+SASREAL = ["HG02600","HG03600","HG03770"]
 
-AFSAMPLES = ["AF_AFR","AF_AMR","AF_EAS","AF_FIN","AF_NFE","AF_SAS"]
-ACSAMPLES = ["AC_AFR","AC_AMR","AC_EAS","AC_FIN","AC_NFE","AC_SAS"]
+AFPOP = ["AF_AFR","AF_AMR","AF_EAS","AF_FIN","AF_NFE","AF_SAS"]
+ACPOP = ["AC_AFR","AC_AMR","AC_EAS","AC_FIN","AC_NFE","AC_SAS"]
 
-ANALYSIS = ["merge_exac_af","merge_exac_ac","merge_afackg","merge_nfe_afackg"]
+ANALYSIS = ["merge_exac_af","merge_exac_ac","merge_afac","merge_afackg","merge_afr_afackg","merge_amr_afackg","merge_eas_afackg","merge_fin_afackg","merge_nfe_afackg","merge_sas_afackg"]
 
 REPETITION_NUMBER = 10
 REPETITION = list(range(1,REPETITION_NUMBER+1))
@@ -22,29 +26,32 @@ rule all:
         expand("region/Panel.{chex}.coverage.txt.gz", chex=CHROMEX),
         expand("region/Panel.{chex}.coverage.txt.gz.tbi", chex=CHROMEX),
         "region/regions.bed",
-        expand("1KG/samples/1KGsamples.{auto}.vcf.gz", auto=AUTOSOMES),
-        expand("1KG/samples/1KGsamples.{auto}.vcf.gz.tbi", auto=AUTOSOMES),
-        "1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz",
-        "1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz.tbi",
-        "1KG/samples/1KGsamples.chrMT.vcf.gz",
-        "1KG/samples/1KGsamples.chrX.vcf.gz",
-        "1KG/samples/1KGsamples.chrY.vcf.gz",
-        "1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
-        "1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
-        "1KG/samples/1KGsamples.chrY.vcf.gz.tbi",
-        "1KG/1KGsamples_concat.vcf.gz",
-        "1KG/1KGsamples_concat.vcf.gz.tbi",
-        "1KG/1KG.regcut.vcf.gz",
-        "1KG/1KG.regcut.vcf.gz.tbi",
+        expand("../1KG/samples/1KGsamples.{auto}.vcf.gz", auto=AUTOSOMES),
+        expand("../1KG/samples/1KGsamples.{auto}.vcf.gz.tbi", auto=AUTOSOMES),
+        "../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz",
+        "../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrMT.vcf.gz",
+        "../1KG/samples/1KGsamples.chrX.vcf.gz",
+        "../1KG/samples/1KGsamples.chrY.vcf.gz",
+        "../1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrY.vcf.gz.tbi",
+        "../1KG/1KGsamples_concat.vcf.gz",
+        "../1KG/1KGsamples_concat.vcf.gz.tbi",
+        "../1KG/1KG.regcut.vcf.gz",
+        "../1KG/1KG.regcut.vcf.gz.tbi",
         "ExAC/ExAC.regcut.vcf.gz",
         "ExAC/ExAC.regcut.vcf.gz.tbi",
-        "1KG/1KG.regcut.nfe.vcf.gz",
-        "1KG/1KG.regcut.nfe.vcf.gz.tbi",
-        # samplings
-        expand("samplings/ExAC/sample_AF_pop/AF_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        expand("samplings/ExAC/sample_AC_pop/AC_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        # analysis
+        expand("1KG/1KG.regcut.{pop}.vcf.gz", pop=POPULATION),
+        expand("1KG/1KG.regcut.{pop}.vcf.gz.tbi", pop=POPULATION),
+        # "1KG/1KG.regcut.NFE.vcf.gz",
+        # "1KG/1KG.regcut.NFE.vcf.gz.tbi",
+        # samplings #
+        expand("samplings/ExAC/sample_AF_pop/AF_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        expand("samplings/ExAC/sample_AC_pop/AC_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        # analysis #
         expand("analysis/{analysis}/prepsmart/pop_merge.vcf.gz", analysis=ANALYSIS),
+        "analysis/merge_nfe_afackg/prepsmart/pop_merge_filtered.vcf.gz",
         expand("analysis/{analysis}/prepsmart/pop_merge_newid.vcf.gz", analysis=ANALYSIS),
         expand("analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz", analysis=ANALYSIS),
         expand("analysis/{analysis}/plink/ld_prune.prune.in", analysis=ANALYSIS),
@@ -58,22 +65,31 @@ rule all:
         expand("analysis/{analysis}/smartpca/pca.log", analysis=ANALYSIS),
         expand("analysis/{analysis}/smartpca/pca.evec", analysis=ANALYSIS),
         expand("analysis/{analysis}/smartpca/pca.eval", analysis=ANALYSIS),
-        # "smartpca/grmjunk",
-        # "smartpca/grmjunk.id",
-        # plotting
+        # plotting #
         "analysis/merge_exac_af/smartpca/plotpca.xtxt",
         "analysis/merge_exac_af/smartpca/plotpca.ps",
         "analysis/merge_exac_ac/smartpca/plotpca.xtxt",
         "analysis/merge_exac_ac/smartpca/plotpca.ps",
+        "analysis/merge_afac/smartpca/plotpca.xtxt",
+        "analysis/merge_afac/smartpca/plotpca.ps",
         "analysis/merge_afackg/smartpca/plotpca.xtxt",
         "analysis/merge_afackg/smartpca/plotpca.ps",
-        "analysis/merge_nfe_afackg/smartpca/plotpca.xtxt",
-        "analysis/merge_nfe_afackg/smartpca/plotpca.ps",
-
+        "analysis/merge_afr_afackg/smartpca/afr_plotpca.xtxt",
+        "analysis/merge_afr_afackg/smartpca/afr_plotpca.ps",
+        "analysis/merge_amr_afackg/smartpca/amr_plotpca.xtxt",
+        "analysis/merge_amr_afackg/smartpca/amr_plotpca.ps",
+        "analysis/merge_eas_afackg/smartpca/eas_plotpca.xtxt",
+        "analysis/merge_eas_afackg/smartpca/eas_plotpca.ps",
+        "analysis/merge_fin_afackg/smartpca/fin_plotpca.xtxt",
+        "analysis/merge_fin_afackg/smartpca/fin_plotpca.ps",
+        "analysis/merge_nfe_afackg/smartpca/filtered_nfe_plotpca.xtxt",
+        "analysis/merge_nfe_afackg/smartpca/filtered_nfe_plotpca.ps",
+        "analysis/merge_sas_afackg/smartpca/sas_plotpca.xtxt",
+        "analysis/merge_sas_afackg/smartpca/sas_plotpca.ps",
         # "smartpca/plotpca.pdf"
 
 
-################################ PREP REGIONS ################################
+############################## PREP REGIONS EXAC ##############################
 
 
 # Download the regions for the exome and their indexes
@@ -104,14 +120,14 @@ rule pick_region:
         "python {input.scr} --coverage 20 --directory {input.dir} > {output}"
 
 
-#################################  PREP 1KG  #################################
+################################## PREP 1KG #################################
 
 
 # Download the real genomes and indexes from 1000 Genomes project, first the autosomes
 rule download_auto:
     input:
     output:
-        (expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz", auto=AUTOSOMES))
+        expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz", auto=AUTOSOMES)
     run:
         for chr in AUTOSOMES:
             shell("wget -O 1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz")
@@ -119,7 +135,7 @@ rule download_auto:
 rule download_autoidx:
     input:
     output:
-        (expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi", auto=AUTOSOMES))
+        expand("1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi", auto=AUTOSOMES)
     run:
         for chr in AUTOSOMES:
             shell("wget -O 1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi")
@@ -218,6 +234,15 @@ rule gonosample_idx:
         tabix {input.x};
         tabix {input.y}
         """
+# # Concatenate the 1KG chromosome vcfs into one vcf
+# rule concat1KG:
+# 	input:
+# 		vcf=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+# 		index=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+# 	output:
+# 		"1KG/1KGsamples_concat.vcf.gz"
+# 	shell:
+# 		"bcftools concat {input.vcf} | bcftools view -v snps,indels | bgzip -c > {output}"
 
 # Concatenate the 1KG chromosome vcfs into one vcf
 rule concat1KG:
@@ -227,7 +252,7 @@ rule concat1KG:
 	output:
 		"1KG/1KGsamples_concat.vcf.gz"
 	shell:
-		"bcftools concat {input.vcf} | bcftools view -v snps,indels | bgzip -c > {output}"
+		"bcftools concat {input.vcf} -O z -o {output}"
 
 # Create index
 rule concat_idx:
@@ -238,7 +263,11 @@ rule concat_idx:
 	shell:
 		"tabix {input}"
 
-rule filter_1kg:
+
+################################ FILTER 1KG  ################################
+
+
+rule filter_exac_1kg:
     input:
         vcf="1KG/1KGsamples_concat.vcf.gz",
         bed="region/regions.bed"
@@ -247,7 +276,55 @@ rule filter_1kg:
     shell:
         "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
 
-rule filterkg_idx:
+rule filterexackg_idx:
+    input:
+        "1KG/1KG.regcut.vcf.gz"
+    output:
+        "1KG/1KG.regcut.vcf.gz.tbi"
+    shell:
+        "tabix {input}"# # Concatenate the 1KG chromosome vcfs into one vcf
+rule concat1KG:
+	input:
+		vcf=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+		index=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+	output:
+		"1KG/1KGsamples_concat.vcf.gz"
+	shell:
+		"bcftools concat {input.vcf} | bcftools view -v snps,indels | bgzip -c > {output}"
+
+# Concatenate the 1KG chromosome vcfs into one vcf
+rule concat1KG:
+	input:
+		vcf=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+		index=expand("1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+	output:
+		"1KG/1KGsamples_concat.vcf.gz"
+	shell:
+		"bcftools concat {input.vcf} -O z -o {output}"
+
+# Create index
+rule concat_idx:
+	input:
+		"1KG/1KGsamples_concat.vcf.gz"
+	output:
+		"1KG/1KGsamples_concat.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+
+################################ FILTER 1KG  ################################
+
+
+rule filter_exac_1kg:
+    input:
+        vcf="1KG/1KGsamples_concat.vcf.gz",
+        bed="region/regions.bed"
+    output:
+        "1KG/1KG.regcut.vcf.gz"
+    shell:
+        "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
+
+rule filterexackg_idx:
     input:
         "1KG/1KG.regcut.vcf.gz"
     output:
@@ -256,7 +333,7 @@ rule filterkg_idx:
         "tabix {input}"
 
 
-################################# PREP EXAC  #################################
+################################# PREP EXAC #################################
 
 
 # Download and prepare ExAC files for SIMdrom.
@@ -306,50 +383,51 @@ rule filterex_idx:
         "tabix {input}"
 
 
-#############################  SIMDROM SAMPLING  #############################
+############################# SIMDROM SAMPLING #############################
 
 
 # Sample individuals of different ethnicities using SIMdrom.
-rule sample_AF_pop:
+rule sample_AF_exac:
     input:
-        exac="ExAC/ExAC.regcut.vcf.gz",
-        eidx="ExAC/ExAC.regcut.vcf.gz.tbi",
+        vcf="ExAC/ExAC.regcut.vcf.gz",
+        idx="ExAC/ExAC.regcut.vcf.gz.tbi",
         jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
-        "samplings/ExAC/sample_AF_pop/AF_{sample}.{repetition}.vcf.gz"
+        "samplings/ExAC/sample_AF_pop/AF_{pop}.{repetition}.vcf.gz"
     params:
-        sample="{sample}",
+        pop="{pop}",
         rep="{repetition}"
     shell:
-        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.sample} -bAN AN_{params.sample} -n AF_{params.sample}.{params.rep} --output {output}"
+        "java -jar {input.jar} -b {input.exac} -bAC AC_{params.pop} -bAN AN_{params.pop} -n AF_{params.pop}.{params.rep} --output {output}"
 
-rule sample_AC_pop:
+rule sample_AC_exac:
     input:
-        exac="ExAC/ExAC.regcut.vcf.gz",
-        eidx="ExAC/ExAC.regcut.vcf.gz.tbi",
+        vcf="ExAC/ExAC.regcut.vcf.gz",
+        idx="ExAC/ExAC.regcut.vcf.gz.tbi",
         jar= "../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
     output:
-        "samplings/ExAC/sample_AC_pop/AC_{sample}.{repetition}.vcf.gz"
+        "samplings/ExAC/sample_AC_pop/AC_{pop}.{repetition}.vcf.gz"
     params:
-        sample="{sample}",
+        pop="{pop}",
         rep="{repetition}"
     shell:
-        "java -jar {input.jar} -b {input.exac} -bAChom Hom_{params.sample} -bAChet Het_{params.sample} -bAChemi Hemi_{params.sample} -bAN AN_{params.sample} -n AC_{params.sample}.{params.rep} --output {output}"
+        "java -jar {input.jar} -b {input.exac} -bAChom Hom_{params.pop} -bAChet Het_{params.pop} -bAChemi Hemi_{params.pop} -bAN AN_{params.pop} -n AC_{params.pop}.{params.rep} --output {output}"
 
 
-################################ pop analysis ################################
+################################## pick pop ##################################
 
 
-rule pick_popkg:
+# Pick pop filtered for ExAC
+rule pickpop_regcutkg:
     input:
         vcf="1KG/1KG.regcut.vcf.gz",
-        pop="pop/nfe.txt"
+        pop="pop/{pop}.txt"
     output:
-        vcf="1KG/1KG.regcut.nfe.vcf.gz",
-        idx="1KG/1KG.regcut.nfe.vcf.gz.tbi"
+        vcf="1KG/1KG.regcut.{pop}.vcf.gz",
+        idx="1KG/1KG.regcut.{pop}.vcf.gz.tbi"
     shell:
         """
-        bcftools view -Oz -S {input.pop} {input.vcf} > {output.vcf};
+        bcftools view -Oz --min-ac=1 -S {input.pop} {input.vcf} > {output.vcf};
         tabix {output.vcf}
         """
 
@@ -360,7 +438,7 @@ rule pick_popkg:
 # Merge exac-af (simulated using allele frequencies) and real 1kg exomes into one file.
 rule merge_exac_af:
     input:
-        exac=expand("samplings/ExAC/sample_AF_pop/AF_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        exac=expand("samplings/ExAC/sample_AF_pop/AF_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
         kg="1KG/1KG.regcut.vcf.gz"
     output:
         "analysis/merge_exac_af/prepsmart/pop_merge.vcf.gz"
@@ -370,44 +448,123 @@ rule merge_exac_af:
 # Merge exac-ac (simulated using actual hom/het allele counts) and real 1kg exomes into one file.
 rule merge_exac_ac:
     input:
-        exac=expand("samplings/ExAC/sample_AC_pop/AC_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        exac=expand("samplings/ExAC/sample_AC_pop/AC_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
         kg="1KG/1KG.regcut.vcf.gz"
     output:
         "analysis/merge_exac_ac/prepsmart/pop_merge.vcf.gz"
     shell:
         "bcftools merge {input.exac} {input.kg} -O z -o {output}"
 
+# Merge exac-af and exac-ac into one file.
+rule merge_afac:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION)
+    output:
+        "analysis/merge_afac/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} -O z -o {output}"
+
 # Merge exac-ac and exac-af and real 1kg exomes into one file.
 rule merge_afackg:
     input:
-        af=expand("samplings/ExAC/sample_AF_pop/AF_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
-        ac=expand("samplings/ExAC/sample_AC_pop/AC_{sample}.{repetition}.vcf.gz", sample=SAMPLES, repetition=REPETITION),
+        af=expand("samplings/ExAC/sample_AF_pop/AF_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_{pop}.{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
         kg="1KG/1KG.regcut.vcf.gz"
     output:
         "analysis/merge_afackg/prepsmart/pop_merge.vcf.gz"
     shell:
         "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
 
-# Merge exac-ac and exac-af and real 1kg exomes into one file.
+
+############################# each pop separate #############################
+
+
+# Merge exac-ac and exac-af and real 1kg (afr) exomes into one file.
+rule merge_afr_afackg:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_AFR.{repetition}.vcf.gz", repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_AFR.{repetition}.vcf.gz", repetition=REPETITION),
+        kg="1KG/1KG.regcut.AFR.vcf.gz"
+    output:
+        "analysis/merge_afr_afackg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
+
+# Merge exac-ac and exac-af and real 1kg (amr) exomes into one file.
+rule merge_amr_afackg:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_AMR.{repetition}.vcf.gz", repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_AMR.{repetition}.vcf.gz", repetition=REPETITION),
+        kg="1KG/1KG.regcut.AMR.vcf.gz"
+    output:
+        "analysis/merge_amr_afackg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
+
+# Merge exac-ac and exac-af and real 1kg (eas) exomes into one file.
+rule merge_eas_afackg:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_EAS.{repetition}.vcf.gz", repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_EAS.{repetition}.vcf.gz", repetition=REPETITION),
+        kg="1KG/1KG.regcut.EAS.vcf.gz"
+    output:
+        "analysis/merge_eas_afackg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
+
+# Merge exac-ac and exac-af and real 1kg (fin) exomes into one file.
+rule merge_fin_afackg:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_FIN.{repetition}.vcf.gz", repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_FIN.{repetition}.vcf.gz", repetition=REPETITION),
+        kg="1KG/1KG.regcut.FIN.vcf.gz"
+    output:
+        "analysis/merge_fin_afackg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
+
+# Merge exac-ac and exac-af and real 1kg (nfe) exomes into one file.
 rule merge_nfe_afackg:
     input:
         af=expand("samplings/ExAC/sample_AF_pop/AF_NFE.{repetition}.vcf.gz", repetition=REPETITION),
         ac=expand("samplings/ExAC/sample_AC_pop/AC_NFE.{repetition}.vcf.gz", repetition=REPETITION),
-        kg="1KG/1KG.regcut.nfe.vcf.gz"
+        kg="1KG/1KG.regcut.NFE.vcf.gz"
     output:
         "analysis/merge_nfe_afackg/prepsmart/pop_merge.vcf.gz"
     shell:
         "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
 
+# Merge exac-ac and exac-af and real 1kg (sas) exomes into one file.
+rule merge_sas_afackg:
+    input:
+        af=expand("samplings/ExAC/sample_AF_pop/AF_SAS.{repetition}.vcf.gz", repetition=REPETITION),
+        ac=expand("samplings/ExAC/sample_AC_pop/AC_SAS.{repetition}.vcf.gz", repetition=REPETITION),
+        kg="1KG/1KG.regcut.SAS.vcf.gz"
+    output:
+        "analysis/merge_sas_afackg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.ac} {input.kg} -O z -o {output}"
+
+rule filter_out_rare:
+    input:
+        vcf="analysis/merge_nfe_afackg/prepsmart/pop_merge.vcf.gz",
+        #samples="pop/NFE.txt"
+    output:
+        "analysis/merge_nfe_afackg/prepsmart/pop_merge_filtered.vcf.gz"
+    shell:
+        "bcftools view --exclude 'AF<0.05' {input} -O z -o {output}"
+        # "bcftools view --exclude-private {input.vcf} -S {input.samples} -O z -o {output}"
+        # "bcftools view --min-af 0.05 {input} -O z -o {output}"
 
 
-###############################  prep smartpca  ###############################
+##############################  prep smartpca  ###############################
 
 
 # Give the snps new IDs (some don't have an ID from ExAC),they will be needed later.
 rule new_id:
     input:
-        "analysis/{analysis}/prepsmart/pop_merge.vcf.gz"
+        "analysis/{analysis}/prepsmart/pop_merge_filtered.vcf.gz"
     output:
         "analysis/{analysis}/prepsmart/pop_merge_newid.vcf.gz"
     shell:
@@ -422,6 +579,7 @@ rule corr_ref:
     output:
         "analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz"
     shell:
+        # "bcftools plugin missing2ref {input} > {output}"
         "bcftools plugin missing2ref {input} | bgzip -c > {output}"
 
 # Prune regions that display linkage disequilibrium using PLINK.
@@ -541,58 +699,135 @@ rule smartpca:
 
 ################################## plotting ##################################
 
-# Plot smartpca results for exac-af + 1kg
-rule plot_af:
-    input:
-        "analysis/merge_exac_af/smartpca/pca.evec"
-    output:
-        xtxt="analysis/merge_exac_af/smartpca/plotpca.xtxt",
-        ps="analysis/merge_exac_af/smartpca/plotpca.ps",
-        # pdf="smartpca/plotpca.pdf"
-
-    params:
-        sample=":".join(AFSAMPLES+REAL)
-    shell:
-        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
-
-# Plot smartpca results for exac-ac + 1kg
-rule plot_ac:
-    input:
-        "analysis/merge_exac_ac/smartpca/pca.evec"
-    output:
-        xtxt="analysis/merge_exac_ac/smartpca/plotpca.xtxt",
-        ps="analysis/merge_exac_ac/smartpca/plotpca.ps",
-        # pdf="smartpca/plotpca.pdf"
-
-    params:
-        sample=":".join(ACSAMPLES+REAL)
-    shell:
-        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
-
-# Plot smartpca results for exac-af + exac-ac + 1kg
-rule plot_acafkg:
-    input:
-        "analysis/merge_afackg/smartpca/pca.evec"
-    output:
-        xtxt="analysis/merge_afackg/smartpca/plotpca.xtxt",
-        ps="analysis/merge_afackg/smartpca/plotpca.ps",
-        # pdf="smartpca/plotpca.pdf"
-
-    params:
-        sample=":".join(AFSAMPLES+ACSAMPLES+REAL)
-    shell:
-        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.sample} -x -o {output.xtxt}"
+# # Plot smartpca results for exac-af + 1kg
+# rule plot_af:
+#     input:
+#         "analysis/merge_exac_af/smartpca/pca.evec"
+#     output:
+#         xtxt="analysis/merge_exac_af/smartpca/plotpca.xtxt",
+#         ps="analysis/merge_exac_af/smartpca/plotpca.ps",
+#         # pdf="smartpca/plotpca.pdf"
+#     params:
+#         pop=":".join(AFPOP+REAL)
+#     shell:
+#         "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+#
+# # Plot smartpca results for exac-ac + 1kg
+# rule plot_ac:
+#     input:
+#         "analysis/merge_exac_ac/smartpca/pca.evec"
+#     output:
+#         xtxt="analysis/merge_exac_ac/smartpca/plotpca.xtxt",
+#         ps="analysis/merge_exac_ac/smartpca/plotpca.ps",
+#         # pdf="smartpca/plotpca.pdf"
+#     params:
+#         pop=":".join(ACPOP+REAL)
+#     shell:
+#         "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+#
+# # Plot smartpca results for exac-af + exac-ac
+# rule plot_afac:
+#     input:
+#         "analysis/merge_afac/smartpca/pca.evec"
+#     output:
+#         xtxt="analysis/merge_afac/smartpca/plotpca.xtxt",
+#         ps="analysis/merge_afac/smartpca/plotpca.ps",
+#         # pdf="smartpca/plotpca.pdf"
+#     params:
+#         pop=":".join(AFPOP+ACPOP)
+#     shell:
+#         "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+#
+# # Plot smartpca results for exac-af + exac-ac + 1kg
+# rule plot_acafkg:
+#     input:
+#         "analysis/merge_afackg/smartpca/pca.evec"
+#     output:
+#         xtxt="analysis/merge_afackg/smartpca/plotpca.xtxt",
+#         ps="analysis/merge_afackg/smartpca/plotpca.ps",
+#         # pdf="smartpca/plotpca.pdf"
+#     params:
+#         pop=":".join(AFPOP+ACPOP+REAL)
+#     shell:
+#         "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+#
+############################## each pop separate #############################
 
 # Plot smartpca results for specific pop exac-af + exac-ac + 1kg
+# AFR
+rule plot_afr_acafkg:
+    input:
+        "analysis/merge_afr_afackg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_afr_afackg/smartpca/afr_plotpca.xtxt",
+        ps="analysis/merge_afr_afackg/smartpca/afr_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(AFRREAL)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_AFR:AC_AFR:{params.pop} -x -o {output.xtxt}"
+
+# AMR
+rule plot_amr_acafkg:
+    input:
+        "analysis/merge_amr_afackg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_amr_afackg/smartpca/amr_plotpca.xtxt",
+        ps="analysis/merge_amr_afackg/smartpca/amr_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(AMRREAL)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_AMR:AC_AMR:{params.pop} -x -o {output.xtxt}"
+
+# EAS
+rule plot_eas_acafkg:
+    input:
+        "analysis/merge_eas_afackg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_eas_afackg/smartpca/eas_plotpca.xtxt",
+        ps="analysis/merge_eas_afackg/smartpca/eas_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(EASREAL)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_EAS:AC_EAS:{params.pop} -x -o {output.xtxt}"
+
+# FIN
+rule plot_fin_acafkg:
+    input:
+        "analysis/merge_fin_afackg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_fin_afackg/smartpca/fin_plotpca.xtxt",
+        ps="analysis/merge_fin_afackg/smartpca/fin_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(FINREAL)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_FIN:AC_FIN:{params.pop} -x -o {output.xtxt}"
+
+# NFE
 rule plot_nfe_acafkg:
     input:
         "analysis/merge_nfe_afackg/smartpca/pca.evec"
     output:
-        xtxt="analysis/merge_nfe_afackg/smartpca/plotpca.xtxt",
-        ps="analysis/merge_nfe_afackg/smartpca/plotpca.ps",
+        xtxt="analysis/merge_nfe_afackg/smartpca/filtered_nfe_plotpca.xtxt",
+        ps="analysis/merge_nfe_afackg/smartpca/filtered_nfe_plotpca.ps",
         # pdf="smartpca/plotpca.pdf"
-
     params:
-        sample=":".join(NFEREAL)
+        pop=":".join(NFEREAL)
     shell:
-        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_NFE:AC_NFE:{params.sample} -x -o {output.xtxt}"
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_NFE:AC_NFE:{params.pop} -x -o {output.xtxt}"
+
+# SAS
+rule plot_sas_acafkg:
+    input:
+        "analysis/merge_sas_afackg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_sas_afackg/smartpca/sas_plotpca.xtxt",
+        ps="analysis/merge_sas_afackg/smartpca/sas_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(SASREAL)
+    shell:
+        "../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AF_SAS:AC_SAS:{params.pop} -x -o {output.xtxt}"

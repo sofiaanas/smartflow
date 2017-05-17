@@ -1,0 +1,751 @@
+
+CHROMOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX","chrY","chrMT"]
+AUTOSOMES=["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
+
+GNOMSITES=["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
+
+POPULATION = ["AFR","AMR","EAS","FIN","NFE"]
+
+
+REAL = ["NA19020","NA19700","NA18510","HG01550","HG01970","NA19720","NA18620","NA18940","HG01600","HG00310","HG00190","HG00280","HG00140","NA20510","NA07000"]
+
+
+AFRREAL = ["NA19020","NA19700","NA18510"]
+AMRREAL = ["HG01550","HG01970","NA19720"]
+EASREAL = ["NA18620","NA18940","HG01600"]
+FINREAL = ["HG00310","HG00190","HG00280"]
+NFEREAL = ["HG00140","NA20510","NA07000"]
+
+
+AFPOP = ["AFAFR","AFAMR","AFEAS","AFFIN","AFNFE"]
+GCPOP = ["GCAFR","GCAMR","GCEAS","GCFIN","GCNFE"]
+
+ANALYSIS = ["merge_gafgc","merge_afr_gafgckg","merge_amr_gafgckg","merge_eas_gafgckg","merge_fin_gafgckg","merge_nfe_gafgckg"]
+
+
+REPETITION_NUMBER = 10
+REPETITION = list(range(1,REPETITION_NUMBER+1))
+
+rule all:
+    input:
+        "refseq/ref_GRCh37.p13_top_level.bed.gz",
+        "refseq/ref_GRCh37.p13_top_level.bed.gz.tbi",
+        expand("../1KG/samples/1KGsamples.{auto}.vcf.gz", auto=AUTOSOMES),
+        expand("../1KG/samples/1KGsamples.{auto}.vcf.gz.tbi", auto=AUTOSOMES),
+        "../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz",
+        "../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrMT.vcf.gz",
+        "../1KG/samples/1KGsamples.chrX.vcf.gz",
+        "../1KG/samples/1KGsamples.chrY.vcf.gz",
+        "../1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
+        "../1KG/samples/1KGsamples.chrY.vcf.gz.tbi",
+        "../1KG/1KGsamples_concat.vcf.gz",
+        "../1KG/1KGsamples_concat.vcf.gz.tbi",
+        "../1KG/refseq/1KG.refseq.vcf.gz",
+        "../1KG/refseq/1KG.refseq.vcf.gz.tbi",
+        expand("filtered/gnomad.{site}.refseq.vcf.gz", site=GNOMSITES),
+        expand("filtered/gnomad.{site}.refseq.vcf.gz.tbi", site=GNOMSITES),
+        "gnomad.refseq.vcf.gz",
+        "gnomad.refseq.vcf.gz.tbi",
+        expand("../1KG/refseq/1KG.refseq.{pop}.vcf.gz", pop=POPULATION),
+        expand("../1KG/refseq/1KG.refseq.{pop}.vcf.gz.tbi", pop=POPULATION),
+        # samplings #
+        expand("samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        #expand("samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz.tbi", pop=POPULATION, repetition=REPETITION),
+        expand("samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        #expand("samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz.tbi", pop=POPULATION, repetition=REPETITION),
+        # analysis #
+        expand("analysis/{analysis}/prepsmart/pop_merge.vcf.gz", analysis=ANALYSIS),
+        expand("analysis/{analysis}/prepsmart/pop_merge_newid.vcf.gz", analysis=ANALYSIS),
+        expand("analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz", analysis=ANALYSIS),
+        expand("analysis/{analysis}/plink/ld_prune.prune.in", analysis=ANALYSIS),
+        expand("analysis/{analysis}/plink/ld_prune.prune.out", analysis=ANALYSIS),
+        expand("analysis/{analysis}/plink/ld_prune.nosex", analysis=ANALYSIS),
+        expand("analysis/{analysis}/plink/ld_prune.log", analysis=ANALYSIS),
+        expand("analysis/{analysis}/prepsmart/pop_merge_newid_corref_ldpruned.vcf", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/genfile.eigenstratgeno", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/snpfile.snp", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/indfile.ind", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/pca.log", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/pca.evec", analysis=ANALYSIS),
+        expand("analysis/{analysis}/smartpca/pca.eval", analysis=ANALYSIS),
+        # plotting #
+        "analysis/merge_gafgc/smartpca/afgc_plotpca.xtxt",
+        "analysis/merge_gafgc/smartpca/afgc_plotpca.ps",
+        "analysis/merge_gafgckg/smartpca/afgckg_plotpca.xtxt",
+        "analysis/merge_gafgckg/smartpca/afgckg_plotpca.ps",
+        "analysis/merge_afr_gafgckg/smartpca/afr_plotpca.xtxt",
+        "analysis/merge_afr_gafgckg/smartpca/afr_plotpca.ps",
+        "analysis/merge_amr_gafgckg/smartpca/amr_plotpca.xtxt",
+        "analysis/merge_amr_gafgckg/smartpca/amr_plotpca.ps",
+        "analysis/merge_eas_gafgckg/smartpca/eas_plotpca.xtxt",
+        "analysis/merge_eas_gafgckg/smartpca/eas_plotpca.ps",
+        "analysis/merge_fin_gafgckg/smartpca/fin_plotpca.xtxt",
+        "analysis/merge_fin_gafgckg/smartpca/fin_plotpca.ps",
+        "analysis/merge_nfe_gafgckg/smartpca/nfe_plotpca.xtxt",
+        "analysis/merge_nfe_gafgckg/smartpca/nfe_plotpca.ps",
+        # "smartpca/plotpca.pdf"
+
+
+################################ PREP REFSEQ ################################
+
+rule download_refSeq:
+	input:
+	output:
+		"refseq/ref_GRCh37.p13_top_level.gff3.gz"
+	shell:
+		"curl ftp://ftp.ncbi.nlm.nih.gov/refseq/H_sapiens/H_sapiens/ARCHIVE/ANNOTATION_RELEASE.105/GFF/ref_GRCh37.p13_top_level.gff3.gz "
+		"> {output}"
+
+rule refSeqToBed:
+	input:
+		"refseq/ref_GRCh37.p13_top_level.gff3.gz"
+	output:
+		"refseq/ref_GRCh37.p13_top_level.bed.gz"
+	shell:
+		"""
+		zcat {input} | grep '^NC' | grep '\sexon\s' | awk -F "\t" -v OFS="\t" '{{print $1,$4,$5,$3,$6,$7}}' |
+        sed 's/NC_000001.10/1/g' |
+        sed 's/NC_000002.11/2/g' |
+        sed 's/NC_000003.11/3/g' |
+        sed 's/NC_000004.11/4/g' |
+        sed 's/NC_000005.9/5/g' |
+        sed 's/NC_000006.11/6/g' |
+        sed 's/NC_000007.13/7/g' |
+        sed 's/NC_000008.10/8/g' |
+        sed 's/NC_000009.11/9/g' |
+        sed 's/NC_000010.10/10/g' |
+        sed 's/NC_000011.9/11/g' |
+        sed 's/NC_000012.11/12/g' |
+        sed 's/NC_000013.10/13/g' |
+        sed 's/NC_000014.8/14/g' |
+        sed 's/NC_000015.9/15/g' |
+        sed 's/NC_000016.9/16/g' |
+        sed 's/NC_000017.10/17/g' |
+        sed 's/NC_000018.9/18/g' |
+        sed 's/NC_000019.9/19/g' |
+        sed 's/NC_000020.10/20/g' |
+        sed 's/NC_000021.8/21/g' |
+        sed 's/NC_000022.10/22/g' |
+        grep -v '^NC_000023.10' |
+        grep -v '^NC_000024.9' |
+        grep -v '^NC_012920.1' |
+        sort -k 1,1 -k 2,2n | bedtools merge -i - | bgzip -c > {output}
+		"""
+
+rule indexRefSeqBed:
+	input:
+		"refseq/ref_GRCh37.p13_top_level.bed.gz"
+	output:
+		"refseq/ref_GRCh37.p13_top_level.bed.gz.tbi"
+	shell:
+		"tabix {input}"
+
+
+################################## PREP 1KG #################################
+
+
+# Download the real genomes and indexes from 1000 Genomes project, first the autosomes
+rule download_auto:
+    input:
+    output:
+        expand("../1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz", auto=AUTOSOMES)
+    run:
+        for chr in AUTOSOMES:
+            shell("wget -O ../1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz")
+
+rule download_autoidx:
+    input:
+    output:
+        expand("../1KG/download/ALL.{auto}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi", auto=AUTOSOMES)
+    run:
+        for chr in AUTOSOMES:
+            shell("wget -O ../1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi")
+
+# Pick out six samples from each autosome (one from each population) defined in samples.txt
+rule pick_auto:
+    input:
+        samples="samples.txt",
+        vcf="../1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz",
+        index="../1KG/download/ALL.{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.tbi"
+    output:
+        "../1KG/samples/1KGsamples.{chr}.vcf.gz"
+    shell:
+        "bcftools view -Oz --min-ac=1 -S {input.samples} {input.vcf} > {output}"
+
+# Create new indexes
+rule autosample_idx:
+	input:
+		"../1KG/samples/1KGsamples.{chr}.vcf.gz"
+	output:
+		"../1KG/samples/1KGsamples.{chr}.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+# Download the real genomes and indexes from 1000 Genomes project, now the gonosomes
+rule download_gono:
+	input:
+	output:
+		mt="../1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz",
+		x="../1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz",
+		y="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz"
+	shell:
+		"wget -O {output.mt} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz && "
+		"wget -O {output.x} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz && "
+		"wget -O {output.y} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz "
+
+rule download_gonoidx:
+	input:
+	output:
+		mt="../1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi",
+		x="../1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi",
+		y="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz.tbi"
+	shell:
+		"wget -O {output.mt} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi && "
+		"wget -O {output.x} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi && "
+		"wget -O {output.y} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz.tbi "
+
+# If selected samples are missing in the Y-vcf (if they're females) add these samples and set their genotypes to 0
+rule missing_gt:
+    input:
+        yvcf="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.vcf.gz",
+        samples="samples.txt"
+    output:
+        vcf="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz",
+        ibx="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz.tbi"
+    shell:
+        """
+        zcat {input.yvcf} | python ../scripts/addZeroIfSampleNotPresent.py {input.samples} | bgzip -c > {output.vcf};
+        tabix {output.vcf}
+        """
+
+# Pick out six samples from each gonosome (one from each population) defined in samples.txt
+rule pick_gono:
+    input:
+        samples="samples.txt",
+        mt="../1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz",
+        mtidx="../1KG/download/ALL.chrMT.phase3_callmom-v0_4.20130502.genotypes.vcf.gz.tbi",
+        x="../1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz",
+        xidx="../1KG/download/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz.tbi",
+        y="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz",
+        yidx="../1KG/download/ALL.chrY.phase3_integrated_v2a.20130502.genotypes.adjusted.vcf.gz.tbi"
+    output:
+        mt="../1KG/samples/1KGsamples.chrMT.vcf.gz",
+        x="../1KG/samples/1KGsamples.chrX.vcf.gz",
+        y="../1KG/samples/1KGsamples.chrY.vcf.gz"
+    shell:
+        """
+        bcftools view -Oz --min-ac=1 -S {input.samples} {input.mt} > {output.mt};
+        bcftools view -Oz --min-ac=1 -S {input.samples} {input.x} > {output.x};
+        bcftools view -Oz --min-ac=1 -S {input.samples} {input.y} > {output.y}
+        """
+
+# Create new indexes
+rule gonosample_idx:
+    input:
+        mt="../1KG/samples/1KGsamples.chrMT.vcf.gz",
+        x="../1KG/samples/1KGsamples.chrX.vcf.gz",
+        y="../1KG/samples/1KGsamples.chrY.vcf.gz"
+    output:
+        mt="../1KG/samples/1KGsamples.chrMT.vcf.gz.tbi",
+        x="../1KG/samples/1KGsamples.chrX.vcf.gz.tbi",
+        y="../1KG/samples/1KGsamples.chrY.vcf.gz.tbi"
+    shell:
+        """
+        tabix {input.mt};
+        tabix {input.x};
+        tabix {input.y}
+        """
+
+# # Concatenate the 1KG chromosome vcfs into one vcf
+# rule concat1KG:
+# 	input:
+# 		vcf=expand("../1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+# 		index=expand("../1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+# 	output:
+# 		"../1KG/1KGsamples_concat.vcf.gz"
+# 	shell:
+# 		"bcftools concat {input.vcf} | bcftools view -v snps,indels | bgzip -c > {output}"
+
+# Concatenate the 1KG chromosome vcfs into one vcf
+rule concat1KG:
+	input:
+		vcf=expand("../1KG/samples/1KGsamples.{chrom}.vcf.gz", chrom=CHROMOSOMES),
+		index=expand("../1KG/samples/1KGsamples.{chrom}.vcf.gz.tbi", chrom=CHROMOSOMES)
+	output:
+		"../1KG/1KGsamples_concat.vcf.gz"
+	shell:
+		"bcftools concat {input.vcf} -O z -o {output}"
+
+# Create index
+rule concat_idx:
+	input:
+		"../1KG/1KGsamples_concat.vcf.gz"
+	output:
+		"../1KG/1KGsamples_concat.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+
+################################ FILTER 1KG  ################################
+
+
+rule filter_refseq_1kg:
+    input:
+        vcf="../1KG/1KGsamples_concat.vcf.gz",
+        bed="refseq/ref_GRCh37.p13_top_level.bed.gz"
+    output:
+        "../1KG/refseq/1KG.refseq.vcf.gz"
+    shell:
+        "bedtools intersect -header -a {input.vcf} -b {input.bed} 2>/dev/null | bgzip -c > {output}"
+
+rule filterefseqkg_idx:
+    input:
+        "../1KG/refseq/1KG.refseq.vcf.gz"
+    output:
+        "../1KG/refseq/1KG.refseq.vcf.gz.tbi"
+    shell:
+        "tabix {input}"
+
+
+################################ PREP GNOMAD ################################
+
+
+# Download all the chromosomes from GNOMAD
+rule download_gnomad:
+    input:
+    output:
+        expand("download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz", site=GNOMSITES)
+    run:
+        for site in GNOMSITES:
+            shell("wget -O download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz https://storage.googleapis.com/gnomad-public/release-170228/vcf/genomes/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz")
+
+rule downloadgnomad_idx:
+    input:
+    output:
+        expand("download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz.tbi", site=GNOMSITES)
+    run:
+        for site in GNOMSITES:
+            shell("wget -O download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz.tbi https://storage.googleapis.com/gnomad-public/release-170228/vcf/genomes/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz.tbi")
+
+# Filter against refseq
+rule filter_refseq_gnomad:
+	input:
+		refseq="refseq/ref_GRCh37.p13_top_level.bed.gz",
+		vcf="download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz",
+		idx="download/gnomad.genomes.r2.0.1.sites.{site}.vcf.gz.tbi"
+	output:
+		"filtered/gnomad.{site}.refseq.vcf.gz"
+	shell:
+		"bedtools intersect -header -a {input.vcf} -b {input.refseq} 2>/dev/null | bgzip -c > {output}"
+
+rule filterrefseqgnomad_idx:
+	input:
+		"filtered/gnomad.{site}.refseq.vcf.gz"
+	output:
+		"filtered/gnomad.{site}.refseq.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+# Concatenate the gnomadfiles
+rule concat_gnomad:
+    input:
+        vcf=expand("filtered/gnomad.{site}.refseq.vcf.gz", site=GNOMSITES),
+        idx=expand("filtered/gnomad.{site}.refseq.vcf.gz.tbi", site=GNOMSITES)
+    output:
+        "gnomad.refseq.vcf.gz"
+    shell:
+        "bcftools concat {input.vcf} -O z -o {output}"
+
+rule concatgnomad_idx:
+	input:
+		"gnomad.refseq.vcf.gz"
+	output:
+		"gnomad.refseq.vcf.gz.tbi"
+	shell:
+		"tabix {input}"
+
+
+############################# SIMDROM SAMPLING #############################
+
+
+# Sample individuals of different ethnicities using SIMdrom.
+rule sample_AF_gnomad:
+    input:
+        vcf="gnomad.refseq.vcf.gz",
+        idx="gnomad.refseq.vcf.gz.tbi",
+        jar= "../../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
+    output:
+        "samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz"
+    params:
+        pop="{pop}",
+        rep="{repetition}"
+    shell:
+        "java -jar {input.jar} -b {input.vcf} -bAC AC_{params.pop} -bAN AN_{params.pop} -n AF_{params.pop}_{params.rep} --output {output}"
+
+# rule afidx:
+#     input:
+#         "samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz"
+#     output:
+#         "samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz.tbi"
+#     shell:
+#         "tabix {input}"
+
+rule sample_GC_gnomad:
+    input:
+         vcf="gnomad.refseq.vcf.gz",
+         idx="gnomad.refseq.vcf.gz.tbi",
+         jar= "../../simdrom/simdrom-cli/target/simdrom-cli-0.0.3-SNAPSHOT.jar"
+    output:
+        "samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz"
+    params:
+        pop="{pop}",
+        rep="{repetition}"
+    shell:
+        "java -jar {input.jar} -b {input.vcf} -bGC GC_{params.pop} -n GC_{params.pop}_{params.rep} --output {output}"
+
+# rule acidx:
+#     input:
+#         "samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz"
+#     output:
+#         "samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz.tbi"
+#     shell:
+#         "tabix {input}"
+
+################################## pick pop ##################################
+
+# Pick pop filtered for gnomAD
+rule pickpop_refseqkg:
+    input:
+        vcf="../1KG/refseq/1KG.refseq.vcf.gz",
+        pop="../pop/{pop}.txt"
+    output:
+        vcf="../1KG/refseq/1KG.refseq.{pop}.vcf.gz",
+        idx="../1KG/refseq/1KG.refseq.{pop}.vcf.gz.tbi"
+    shell:
+        """
+        bcftools view -Oz --min-ac=1 -S {input.pop} {input.vcf} > {output.vcf};
+        tabix {output.vcf}
+        """
+
+
+#################################  ANALYSIS  #################################
+
+
+# Merge gnomad-gc and gnomad-af
+rule merge_gafgc:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION)
+    output:
+        "analysis/merge_gafgc/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and 1kg
+rule merge_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_{pop}_{repetition}.vcf.gz", pop=POPULATION, repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.vcf.gz"
+    output:
+        "analysis/merge_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and real 1kg (afr) genomes into one file.
+rule merge_afr_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_AFR_{repetition}.vcf.gz", repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_AFR_{repetition}.vcf.gz", repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.AFR.vcf.gz"
+    output:
+        "analysis/merge_afr_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and real 1kg (amr) genomes into one file.
+rule merge_amr_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_AMR_{repetition}.vcf.gz", repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_AMR_{repetition}.vcf.gz", repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.AMR.vcf.gz"
+    output:
+        "analysis/merge_amr_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and real 1kg (eas) genomes into one file.
+rule merge_eas_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_EAS_{repetition}.vcf.gz", repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_EAS_{repetition}.vcf.gz", repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.EAS.vcf.gz"
+    output:
+        "analysis/merge_eas_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and real 1kg (fin) genomes into one file.
+rule merge_fin_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_FIN_{repetition}.vcf.gz", repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_FIN_{repetition}.vcf.gz", repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.FIN.vcf.gz"
+    output:
+        "analysis/merge_fin_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+# Merge gnomad-gc, gnomad-af and real 1kg (nfe) genomes into one file.
+rule merge_nfe_gafgckg:
+    input:
+        af=expand("samplings/sample_AF_gnomad/AF_NFE_{repetition}.vcf.gz", repetition=REPETITION),
+        gc=expand("samplings/sample_GC_gnomad/GC_NFE_{repetition}.vcf.gz", repetition=REPETITION),
+        kg="../1KG/refseq/1KG.refseq.NFE.vcf.gz"
+    output:
+        "analysis/merge_nfe_gafgckg/prepsmart/pop_merge.vcf.gz"
+    shell:
+        "bcftools merge {input.af} {input.gc} {input.kg} -O z -o {output}"
+
+
+##############################  prep smartpca  ###############################
+
+
+# Give the snps new IDs (some don't have an ID from gnomAD),they will be needed later.
+rule new_id:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge.vcf.gz"
+    output:
+        "analysis/{analysis}/prepsmart/pop_merge_newid.vcf.gz"
+    shell:
+        """
+        zcat {input} | awk -v OFS='\t' '{{ if (/^#/) {{ print $0; next }} else {{ $3="rs"NR; print $0 }} }}' | bgzip -c > {output}
+        """
+
+# Correct the genotype references.
+rule corr_ref:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge_newid.vcf.gz"
+    output:
+        "analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz"
+    shell:
+        # "bcftools plugin missing2ref {input} > {output}"
+        "bcftools plugin missing2ref {input} | bgzip -c > {output}"
+
+# Prune regions that display linkage disequilibrium using PLINK.
+rule ld_prune:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz"
+    output:
+        "analysis/{analysis}/plink/ld_prune.prune.in",
+        "analysis/{analysis}/plink/ld_prune.prune.out",
+        "analysis/{analysis}/plink/ld_prune.nosex",
+        "analysis/{analysis}/plink/ld_prune.log"
+    params:
+        analysis="{analysis}"
+    shell:
+        "~/PLINK/plink --vcf {input} --double-id --indep-pairwise 50 5 0.8 --out analysis/{params.analysis}/plink/ld_prune"
+
+rule rm_regions:
+    input:
+        prune="analysis/{analysis}/plink/ld_prune.prune.out",
+        vcf="analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf.gz"
+    output:
+        uncompressed=temp("analysis/{analysis}/prepsmart/pop_merge_newid_corref.vcf"),
+        vcf="analysis/{analysis}/prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+    shell:
+        """
+        bgzip -dc {input.vcf} > {output.uncompressed};
+        awk 'FNR==NR {{a[$i]; next}}; !($3 in a)' {input.prune} {output.uncompressed} > {output.vcf};
+        """
+
+# Genotype file: Save only genotype columns, remove header and convert genotypes to suit smartpca.
+rule genotypefile:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+    output:
+        "analysis/{analysis}/smartpca/genfile.eigenstratgeno"
+    run:
+        fin = open(input[0], 'r')
+        fout = open(output[0],'w')
+        for line in fin:
+            if line.startswith("#"):
+                continue
+            split_line = line.split("\t")
+            genotypes = split_line[9:len(split_line)]
+            results = []
+            for genotype in genotypes:
+                genotype = genotype.strip()
+                if (genotype == "0/0" or genotype == "0|0"):
+                    result = "2"
+                elif "0" in genotype:
+                    result = "1"
+                else:
+                    result = "0"
+                results.append(result)
+            print("".join(results), file=fout)
+
+        fin.close()
+        fout.close()
+
+# SNP file
+rule snpfile:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+    output:
+        "analysis/{analysis}/smartpca/snpfile.snp"
+    shell:
+        """
+        cat {input} | grep -v "#" | awk -v OFS='\\t' '{{ if ($1 == "X") $1=23; else if ($1=="Y") $1=24; print $3,$1,"0.0",$2,$4,$5}}' > {output}
+        """
+
+# Individuals file
+rule indfile:
+    input:
+        "analysis/{analysis}/prepsmart/pop_merge_newid_corref_ldpruned.vcf"
+    output:
+        "analysis/{analysis}/smartpca/indfile.ind"
+    shell:
+        """
+        bcftools query -l {input} | awk -v OFS="\t" -F"_" '{{print $1$2$3,"U",$1$2}}' > {output}
+        """
+
+# Create the parfile
+rule smartpcaconfig:
+    input:
+        genotypename = "analysis/{analysis}/smartpca/genfile.eigenstratgeno",
+        snpname="analysis/{analysis}/smartpca/snpfile.snp",
+        indivname="analysis/{analysis}/smartpca/indfile.ind"
+    output:
+        "analysis/{analysis}/smartpca/parfile"
+    params:
+        evecoutname="analysis/{analysis}/smartpca/pca.evec",
+        evaloutname="analysis/{analysis}/smartpca/pca.eval"
+    shell:
+        """
+        echo "genotypename: {input.genotypename}" >> {output};
+        echo "snpname: {input.snpname}" >> {output};
+        echo "indivname: {input.indivname}" >> {output};
+        echo "evecoutname: {params.evecoutname}" >> {output};
+        echo "evaloutname: {params.evaloutname}" >> {output};
+        echo "numoutlieriter:   0" >> {output};
+        echo "ealtnormstyle:    NO" >> {output};
+        echo "familynames:     NO" >> {output};
+        echo "grmoutname:      grmjunk" >> {output};
+        """
+
+
+################################ run smartpca ################################
+
+
+# Run smartpca using the parfile
+rule smartpca:
+    input:
+        "analysis/{analysis}/smartpca/parfile"
+    output:
+        log="analysis/{analysis}/smartpca/pca.log",
+        evec="analysis/{analysis}/smartpca/pca.evec",
+        evl="analysis/{analysis}/smartpca/pca.eval"
+        # grmjunk="smartpca/grmjunk",
+        # grmid="smartpca/grmjunk.id"
+    shell:
+        "../../../EIG-6.1.4/bin/smartpca -p {input} > {output.log}"
+
+
+################################## plotting ##################################
+
+
+# gnomad-af + gnomad-gc
+rule plot_gafgc:
+    input:
+        "analysis/merge_gafgc/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_gafgc/smartpca/afgc_plotpca.xtxt",
+        ps="analysis/merge_gafgc/smartpca/afgc_plotpca.ps"
+    params:
+        pop=":".join(AFPOP+GCPOP)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+
+# gnomad-af + gnomad-gc + 1kg
+rule plot_gafgckg:
+    input:
+        "analysis/merge_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_gafgckg/smartpca/afgckg_plotpca.xtxt",
+        ps="analysis/merge_gafgckg/smartpca/afgckg_plotpca.ps"
+    params:
+        pop=":".join(AFPOP+GCPOP+REAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p {params.pop} -x -o {output.xtxt}"
+
+############################## each pop separate #############################
+
+# Plot smartpca results for specific pop gnomad-af + gnomad-gc + 1kg
+
+# AFR
+rule plot_afr_gafgckg:
+    input:
+        "analysis/merge_afr_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_afr_gafgckg/smartpca/afr_plotpca.xtxt",
+        ps="analysis/merge_afr_gafgckg/smartpca/afr_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(AFRREAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AFAFR:GCAFR:{params.pop} -x -o {output.xtxt}"
+
+# AMR
+rule plot_amr_gafgckg:
+    input:
+        "analysis/merge_amr_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_amr_gafgckg/smartpca/amr_plotpca.xtxt",
+        ps="analysis/merge_amr_gafgckg/smartpca/amr_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(AMRREAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AFAMR:GCAMR:{params.pop} -x -o {output.xtxt}"
+
+# EAS
+rule plot_eas_gafgckg:
+    input:
+        "analysis/merge_eas_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_eas_gafgckg/smartpca/eas_plotpca.xtxt",
+        ps="analysis/merge_eas_gafgckg/smartpca/eas_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(EASREAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AFEAS:GCEAS:{params.pop} -x -o {output.xtxt}"
+
+# FIN
+rule plot_fin_gafgckg:
+    input:
+        "analysis/merge_fin_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_fin_gafgckg/smartpca/fin_plotpca.xtxt",
+        ps="analysis/merge_fin_gafgckg/smartpca/fin_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(FINREAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AFFIN:GCFIN:{params.pop} -x -o {output.xtxt}"
+
+# NFE
+rule plot_nfe_gafgckg:
+    input:
+        "analysis/merge_nfe_gafgckg/smartpca/pca.evec"
+    output:
+        xtxt="analysis/merge_nfe_gafgckg/smartpca/nfe_plotpca.xtxt",
+        ps="analysis/merge_nfe_gafgckg/smartpca/nfe_plotpca.ps",
+        # pdf="smartpca/plotpca.pdf"
+    params:
+        pop=":".join(NFEREAL)
+    shell:
+        "../../../EIG-6.1.4/bin/ploteig -i {input} -c 1:2 -p AFNFE:GCNFE:{params.pop} -x -o {output.xtxt}"
